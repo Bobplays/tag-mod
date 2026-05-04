@@ -1,0 +1,29 @@
+p3 having messed up jumps
+SetJumpStrength(js) {
+    if (this._inst?._objectType?._name !== "p3") return this._SetJumpStrength(js);
+    if (js > 1000) {
+        this._f = js;
+        clearTimeout(this._t);
+        this._t = setTimeout(() => this._f = null, 100);
+    }
+    const v = this._f ?? js;
+    this._SetJumpStrength(v);
+    if (this._f) setTimeout(() => this._SetJumpStrength(this._f), 0);
+},
+
+
+data docs
+[
+    "images/shared-0-sheet1.png",
+    398406,
+    515, <x pos of the texture
+    1537, <y pos of the texture
+    747, <width
+    300, <height
+    false, <rot true
+    1, < if 1 = 90 if 0 = 0
+    0.48728246318607765, <x pos
+    0.5366666666666666, <y pos
+    [],
+    []
+]
