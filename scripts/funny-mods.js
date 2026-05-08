@@ -1,47 +1,56 @@
 (function () {
 
-    const runtime = window.c3_runtimeInterface?._localRuntime;
-    if (!runtime) return;
+    // ---------------- RUNTIME ----------------
+
+    let runtime = null;
+
+    function getRuntime() {
+        return window.c3_runtimeInterface?._localRuntime || null;
+    }
+
+    function ensureRuntime() {
+        const r = getRuntime();
+
+        if (r && r !== runtime) {
+            runtime = r;
+
+            // force full rescan when runtime changes
+            yellow = red = blue = null;
+            wi_yellow = wi_red = wi_blue = null;
+        }
+
+        return runtime;
+    }
 
     // ---------------- FINDERS ----------------
 
-    function findYellow() {
+    function findByName(name) {
+        if (!runtime?._instancesByUid) return null;
+
         return Array.from(runtime._instancesByUid.values()).find(o => {
             const n = o._objectType?._name?.toLowerCase() || "";
-            return n === "yellow_skin";
+            return n === name;
         });
     }
 
-    function findRed() {
-        return Array.from(runtime._instancesByUid.values()).find(o => {
-            const n = o._objectType?._name?.toLowerCase() || "";
-            return n === "red_skin";
-        });
-    }
+    const findYellow = () => findByName("yellow_skin");
+    const findRed    = () => findByName("red_skin");
+    const findBlue   = () => findByName("blue_skin");
 
-    function findBlue() {
-        return Array.from(runtime._instancesByUid.values()).find(o => {
-            const n = o._objectType?._name?.toLowerCase() || "";
-            return n === "blue_skin";
-        });
-    }
+    // ---------------- STATE ----------------
 
-    // ---------------- OBJECTS ----------------
+    let yellow, red, blue;
+    let wi_yellow, wi_red, wi_blue;
 
-    let yellow, wi_yellow, value_yellow = 0;
-    let red, wi_red, value_red = 0;
-    let blue, wi_blue, value_blue = 0;
+    let value_yellow = 0;
+    let value_red = 0;
+    let value_blue = 0;
+
+    let holdingJ = false, holdingL = false;
+    let holdingA = false, holdingD = false;
+    let holdingLeft = false, holdingRight = false;
 
     // ---------------- INPUT ----------------
-
-    let holdingJ = false;
-    let holdingL = false;
-
-    let holdingA = false;
-    let holdingD = false;
-
-    let holdingLeft = false;
-    let holdingRight = false;
 
     document.addEventListener("keydown", (e) => {
         const k = e.key.toLowerCase();
@@ -69,65 +78,83 @@
         if (e.key === "ArrowRight") holdingRight = false;
     });
 
+    // ---------------- RECOVERY ----------------
+
+    let lastFullLossTime = 0;
+
+    function shouldForceRescan(y, r, b) {
+        return !y && !r && !b;
+    }
+
+    function forceRescanIfNeeded() {
+        const now = Date.now();
+
+        const y = !!findYellow();
+        const r = !!findRed();
+        const b = !!findBlue();
+
+        if (shouldForceRescan(y, r, b)) {
+            if (now - lastFullLossTime > 1000) {
+                yellow = red = blue = null;
+                wi_yellow = wi_red = wi_blue = null;
+                lastFullLossTime = now;
+            }
+        }
+    }
+
     // ---------------- LOOP ----------------
 
     function loop() {
 
-        // -------- YELLOW (J/L) --------
+        ensureRuntime();
+
+        if (!runtime) {
+            requestAnimationFrame(loop);
+            return;
+        }
+
+        forceRescanIfNeeded();
+
+        // -------- YELLOW --------
         if (!yellow || yellow._destroyed || !wi_yellow) {
             yellow = findYellow();
-            if (yellow) {
-                wi_yellow = yellow._worldInfo;
-                value_yellow = wi_yellow._a || 0;
-            }
+            wi_yellow = yellow?._worldInfo || null;
         }
 
         if (wi_yellow) {
-
             if (holdingL) value_yellow += 0.3;
             if (holdingJ) value_yellow -= 0.3;
 
             wi_yellow._a = value_yellow;
-
-            try { wi_yellow.SetBboxChanged?.(); } catch {}
+            wi_yellow.SetBboxChanged?.();
         }
 
-        // -------- RED (A/D) --------
+        // -------- RED --------
         if (!red || red._destroyed || !wi_red) {
             red = findRed();
-            if (red) {
-                wi_red = red._worldInfo;
-                value_red = wi_red._a || 0;
-            }
+            wi_red = red?._worldInfo || null;
         }
 
         if (wi_red) {
-
             if (holdingD) value_red += 0.3;
             if (holdingA) value_red -= 0.3;
 
             wi_red._a = value_red;
-
-            try { wi_red.SetBboxChanged?.(); } catch {}
+            wi_red.SetBboxChanged?.();
         }
 
-        // -------- BLUE (← →) --------
+        // -------- BLUE --------
         if (!blue || blue._destroyed || !wi_blue) {
             blue = findBlue();
-            if (blue) {
-                wi_blue = blue._worldInfo;
-                value_blue = wi_blue._a || 0;
-            }
+            wi_blue = blue?._worldInfo || null;
         }
 
         if (wi_blue) {
-
             if (holdingRight) value_blue += 0.3;
             if (holdingLeft) value_blue -= 0.3;
 
             wi_blue._a = value_blue;
-
-            try { wi_blue.SetBboxChanged?.(); } catch {}
+            wi_blue.SetBboxChanged?.();
         }
 
         requestAnimationFrame(loop);
