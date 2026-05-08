@@ -185,12 +185,28 @@
     /*──────────────────────────────*/
     document.querySelectorAll(".tabButton").forEach(btn=>{
         btn.onclick=()=>{
+
             document.querySelectorAll(".tabButton").forEach(b=>b.classList.remove("active"));
             btn.classList.add("active");
+
             tab=btn.dataset.tab;
+
             menu.innerHTML="";
             cards.clear();
             logButtons.clear();
+
+            if(tab === "instances"){
+                const s=document.createElement("input");
+                s.className="searchBox";
+                s.placeholder="Search instances...";
+                s.value=search;
+
+                s.oninput=e=>{
+                    search=e.target.value.toLowerCase();
+                };
+
+                menu.prepend(s);
+            }
         };
     });
 
@@ -291,8 +307,14 @@
 
             <hr style="border:1px solid #313244">
 
-            <b>FULL STATE</b><br>
-            <pre style="font-size:11px;white-space:pre-wrap">
+            <b>FULL STATE (click to select)</b><br>
+
+            <pre id="jsonDump" style="
+                font-size:11px;
+                white-space:pre-wrap;
+                user-select:text;
+                cursor:pointer;
+            ">
 ${safeStringify(now, 2)}
             </pre>
 
@@ -302,9 +324,25 @@ ${safeStringify(now, 2)}
             ${changes || "<span style='color:#a6adc8'>No changes</span>"}
         `;
 
+        /* dump button (clean console dump) */
         document.getElementById("dumpJsonBtn").onclick=()=>{
-            console.log("FULL INSTANCE JSON:\n", safeStringify(inst, 5));
+            console.log("INSTANCE SNAPSHOT:\n", now);
         };
+
+        /* click-to-select JSON */
+        const dump=document.getElementById("jsonDump");
+        if(dump){
+            dump.onclick=()=>{
+                const range=document.createRange();
+                range.selectNodeContents(dump);
+
+                const sel=window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+
+                console.log("[MOD] JSON selected");
+            };
+        }
     }
 
     /*──────────────────────────────*/
@@ -325,24 +363,18 @@ ${safeStringify(now, 2)}
 
         if(tab==="instances"){
 
-            if(!document.querySelector(".searchBox")){
-                const s=document.createElement("input");
-                s.className="searchBox";
-                s.placeholder="Search instances...";
-                s.oninput=e=>search=e.target.value.toLowerCase();
-                menu.prepend(s);
-            }
-
             for(const inst of runtime._instancesByUid.values()){
 
                 const name=inst._objectType?._name||"unknown";
                 const uid=inst._uid;
 
-                if(search&&!name.toLowerCase().includes(search)) continue;
+                if(search && !name.toLowerCase().includes(search)) continue;
 
                 let card=cards.get(uid);
-                if(!card) card=createCard(uid,`${name} (${uid})`);
-                else{
+
+                if(!card){
+                    card=createCard(uid,`${name} (${uid})`);
+                } else {
                     card=card.querySelector(".fields");
                     card.innerHTML="";
                 }

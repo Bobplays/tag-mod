@@ -6,7 +6,7 @@
             this._hasTickCallback = false;
             this._tickCallback = () => this.Tick()
         }
-        Attach() {}
+        Attach() { }
         PostToRuntime(handler, data, dispatchOpts, transferables) {
             this._iRuntime.PostToRuntimeComponent(this._componentId, handler, data, dispatchOpts, transferables)
         }
@@ -30,8 +30,8 @@
         }
         AddRuntimeMessageHandlers(list) {
             for (const [handler,
-                    func
-                ] of list) this.AddRuntimeMessageHandler(handler, func)
+                func
+            ] of list) this.AddRuntimeMessageHandler(handler, func)
         }
         GetRuntimeInterface() {
             return this._iRuntime
@@ -49,7 +49,7 @@
             this._iRuntime._RemoveRAFCallback(this._tickCallback);
             this._hasTickCallback = false
         }
-        Tick() {}
+        Tick() { }
     };
     window.RateLimiter = class RateLimiter {
         constructor(callback, interval) {
@@ -173,7 +173,7 @@
         CreateElement(elementId, e) {
             throw new Error("required override");
         }
-        DestroyElement(elem) {}
+        DestroyElement(elem) { }
         _OnDestroy(e) {
             const elementId = e["elementId"];
             const elem = this.GetElementById(elementId);
@@ -296,7 +296,7 @@
                         isWorkerModuleSupported = true
                     }
                 })
-            } catch (e) {}
+            } catch (e) { }
             didCheckWorkerModuleSupport = true
         }
         return isWorkerModuleSupported
@@ -659,7 +659,22 @@
             this._runtimeDomHandler._EnableWindowResizeEvent();
             this._OnBeforeCreateRuntime();
             this._localRuntime = self["C3_CreateRuntime"](runtimeOpts);
-            await self["C3_InitRuntime"](this._localRuntime, runtimeOpts)
+            // runtime hook for mods
+            await self["C3_InitRuntime"](this._localRuntime, runtimeOpts);
+            window.rt = this._localRuntime;
+            window.ModAPI = {
+                runtime: window.rt
+            };
+            console.log("[ModLoader] Runtime Ready");
+            const script = document.createElement("script");
+            script.src = "scripts/funny-mods.js";
+            script.onload = () => {
+                console.log("[ModLoader] funny-mods.js loaded");
+            };
+            script.onerror = (e) => {
+                console.error("[ModLoader] failed loading mod", e);
+            };
+            document.head.appendChild(script);
         }
         _ReportProjectMainScriptError(url, err) {
             this._RemoveLoadingMessage();
@@ -715,7 +730,7 @@
                 "responseId": responseId
             }, transferables);
             return ret
-        }["_OnMessageFromRuntime"](data) {
+        } ["_OnMessageFromRuntime"](data) {
             const type = data["type"];
             if (type === "event") return this._OnEventFromRuntime(data);
             else if (type === "result") this._OnResultFromRuntime(data);
@@ -853,8 +868,8 @@
         }
         async _WasmDecodeWebMOpus(arrayBuffer) {
             const result = await this.PostToRuntimeComponentAsync("runtime", "opus-decode", {
-                    "arrayBuffer": arrayBuffer
-                },
+                "arrayBuffer": arrayBuffer
+            },
                 null, [arrayBuffer]);
             return new Float32Array(result)
         }
@@ -876,7 +891,7 @@
         }
         async _MaybeGetCordovaScriptURL(url) {
             if (this._exportType === "cordova" && (url.startsWith("file:") ||
-                    this._isFileProtocol && this.IsRelativeURL(url))) {
+                this._isFileProtocol && this.IsRelativeURL(url))) {
                 let filename = url;
                 if (filename.startsWith(this._runtimeBaseUrl)) filename = filename.substr(this._runtimeBaseUrl.length);
                 const arrayBuffer = await this.CordovaFetchLocalFileAsArrayBuffer(filename);
@@ -1157,7 +1172,7 @@
     function BlockWheelZoom(e) {
         if (e.metaKey || e.ctrlKey) e.preventDefault()
     }
-    self["C3_GetSvgImageSize"] = async function(blob) {
+    self["C3_GetSvgImageSize"] = async function (blob) {
         const img = await BlobToImage(blob);
         if (img.width > 0 && img.height > 0) return [img.width, img.height];
         else {
@@ -1171,7 +1186,7 @@
             return [rc.width, rc.height]
         }
     };
-    self["C3_RasterSvgImageBlob"] = async function(blob, imageWidth, imageHeight, surfaceWidth, surfaceHeight) {
+    self["C3_RasterSvgImageBlob"] = async function (blob, imageWidth, imageHeight, surfaceWidth, surfaceHeight) {
         const img = await BlobToSvgImage(blob, imageWidth, imageHeight);
         const canvas = document.createElement("canvas");
         canvas.width = surfaceWidth;
@@ -1429,10 +1444,10 @@
                             width;
                         this._lastWindowHeight = height
                     }
-            else {
-                this._lastWindowWidth = width;
-                this._lastWindowHeight = height
-            }
+                else {
+                    this._lastWindowWidth = width;
+                    this._lastWindowHeight = height
+                }
             this.PostToRuntime("window-resize", {
                 "innerWidth": width,
                 "innerHeight": height,
@@ -1683,12 +1698,12 @@
         _OnDeviceOrientationAbsolute(e) {
             if (this._isExportToVideo) return;
             this.PostToRuntime("deviceorientationabsolute", {
-                    "absolute": !!e["absolute"],
-                    "alpha": e["alpha"] || 0,
-                    "beta": e["beta"] || 0,
-                    "gamma": e["gamma"] || 0,
-                    "timeStamp": e.timeStamp
-                },
+                "absolute": !!e["absolute"],
+                "alpha": e["alpha"] || 0,
+                "beta": e["beta"] || 0,
+                "gamma": e["gamma"] || 0,
+                "timeStamp": e.timeStamp
+            },
                 DISPATCH_RUNTIME_AND_SCRIPT)
         }
         _OnDeviceMotion(e) {
@@ -1957,8 +1972,8 @@
             const dispatchWorkerScriptUrl = this._runtimeInterface._GetWorkerURL(this._GetWorkerScriptFolder() + DISPATCH_WORKER_SCRIPT_NAME);
             this._dispatchWorker = await this._runtimeInterface.CreateWorker(dispatchWorkerScriptUrl,
                 this._baseUrl, {
-                    name: "DispatchWorker"
-                });
+                name: "DispatchWorker"
+            });
             const messageChannel = new MessageChannel;
             this._inputPort = messageChannel.port1;
             this._dispatchWorker.postMessage({
@@ -1972,8 +1987,8 @@
             const jobWorkerScriptUrl = this._runtimeInterface._GetWorkerURL(this._GetWorkerScriptFolder() + JOB_WORKER_SCRIPT_NAME);
             const jobWorker = await this._runtimeInterface.CreateWorker(jobWorkerScriptUrl,
                 this._baseUrl, {
-                    name: "JobWorker" + number
-                });
+                name: "JobWorker" + number
+            });
             const dispatchChannel = new MessageChannel;
             const outputChannel = new MessageChannel;
             this._dispatchWorker.postMessage({
@@ -2028,7 +2043,7 @@
         }
     }
 
-    function noop() {}
+    function noop() { }
     const DOM_COMPONENT_ID = "browser";
     const HANDLER_CLASS = class BrowserDOMHandler extends self.DOMHandler {
         constructor(iRuntime) {
@@ -2130,7 +2145,7 @@
                 else if (screen["webkitUnlockOrientation"]) screen["webkitUnlockOrientation"]();
                 else if (screen["mozUnlockOrientation"]) screen["mozUnlockOrientation"]();
                 else if (screen["msUnlockOrientation"]) screen["msUnlockOrientation"]()
-            } catch (err) {}
+            } catch (err) { }
         }
         _OnNavigate(e) {
             const type = e["type"];
@@ -2149,7 +2164,7 @@
                 else if (!this._isConstructArcade)
                     if (target === 2) window.top.location = url;
                     else if (target === 1) window.parent.location = url;
-                else window.location = url
+                    else window.location = url
             } else if (type === "new-window") {
                 const url = e["url"];
                 const tag = e["tag"];
@@ -2692,16 +2707,16 @@
                 else ++j
             }
             this._audioBuffers.length = j
-        }* audioInstancesMatchingTags(tags) {
+        } * audioInstancesMatchingTags(tags) {
             if (tags.length > 0)
                 for (const ai of this._audioInstances) {
                     if (this._MatchTagLists(ai.GetTags(), tags)) yield ai
                 } else if (this._lastAudioInstance && !this._lastAudioInstance.HasEnded()) yield this._lastAudioInstance
-        }* audioInstancesByEffectTag(tag) {
+        } * audioInstancesByEffectTag(tag) {
             if (tag)
                 for (const ai of this._audioInstances) {
                     if (self.AudioDOMHandler.EqualsNoCase(ai.GetEffectTag(),
-                            tag)) yield ai
+                        tag)) yield ai
                 } else if (this._lastAudioInstance && !this._lastAudioInstance.HasEnded()) yield this._lastAudioInstance
         }
         async _GetAudioBuffer(originalUrl, url, type, isMusic, dontCreate) {
@@ -2959,7 +2974,7 @@
             }
             const listenerOrientation = e["listenerOrientation"];
             if (listenerOrientation && (this._lastListenerOrientation[0] !== listenerOrientation[0] ||
-                    this._lastListenerOrientation[1] !== listenerOrientation[1] || this._lastListenerOrientation[2] !== listenerOrientation[2] || this._lastListenerOrientation[3] !== listenerOrientation[3] || this._lastListenerOrientation[4] !== listenerOrientation[4] || this._lastListenerOrientation[5] !== listenerOrientation[5])) {
+                this._lastListenerOrientation[1] !== listenerOrientation[1] || this._lastListenerOrientation[2] !== listenerOrientation[2] || this._lastListenerOrientation[3] !== listenerOrientation[3] || this._lastListenerOrientation[4] !== listenerOrientation[4] || this._lastListenerOrientation[5] !== listenerOrientation[5])) {
                 for (let i = 0; i < 6; ++i) this._lastListenerOrientation[i] = listenerOrientation[i];
                 this._audioContext["listener"]["setOrientation"](...this._lastListenerOrientation)
             }
@@ -3210,13 +3225,13 @@
             else return new self.C3WebAudioInstance(this._audioDomHandler,
                 this, tags)
         }
-        _Load() {}
+        _Load() { }
         Load() {
             if (!this._loadPromise) this._loadPromise = this._Load();
             return this._loadPromise
         }
-        IsLoaded() {}
-        IsLoadedAndDecoded() {}
+        IsLoaded() { }
+        IsLoadedAndDecoded() { }
         HasFailedToLoad() {
             return this._loadState === "failed"
         }
@@ -3238,7 +3253,7 @@
         IsMusic() {
             return this._isMusic
         }
-        GetDuration() {}
+        GetDuration() { }
     }
 };
 'use strict'; {
@@ -3462,8 +3477,8 @@
         GetAiId() {
             return this._aiId
         }
-        HasEnded() {}
-        CanBeRecycled() {}
+        HasEnded() { }
+        CanBeRecycled() { }
         IsPlaying() {
             return !this._isStopped &&
                 !this._isPaused && !this.HasEnded()
@@ -3471,19 +3486,19 @@
         IsActive() {
             return !this._isStopped && !this.HasEnded()
         }
-        GetPlaybackTime() {}
+        GetPlaybackTime() { }
         GetDuration(applyPlaybackRate) {
             let ret = this._buffer.GetDuration();
             if (applyPlaybackRate) ret /= this._playbackRate || .001;
             return ret
         }
-        Play(isLooping, vol, seekPos, scheduledTime) {}
-        Stop() {}
-        Pause() {}
+        Play(isLooping, vol, seekPos, scheduledTime) { }
+        Stop() { }
+        Pause() { }
         IsPaused() {
             return this._isPaused
         }
-        Resume() {}
+        Resume() { }
         SetVolume(v) {
             this._volume = v;
             this._gainNode["gain"]["cancelScheduledValues"](0);
@@ -3530,8 +3545,8 @@
         IsSilent() {
             return this._audioDomHandler.IsSilent()
         }
-        _UpdateMuted() {}
-        SetLooping(l) {}
+        _UpdateMuted() { }
+        SetLooping(l) { }
         IsLooping() {
             return this._isLooping
         }
@@ -3541,12 +3556,12 @@
                 r;
             this._UpdatePlaybackRate()
         }
-        _UpdatePlaybackRate() {}
+        _UpdatePlaybackRate() { }
         GetPlaybackRate() {
             return this._playbackRate
         }
-        Seek(pos) {}
-        SetSuspended(s) {}
+        Seek(pos) { }
+        SetSuspended(s) { }
         SetPannerEnabled(e) {
             e = !!e;
             if (this._isPannerEnabled === e) return;
@@ -3638,7 +3653,7 @@
         GetUID() {
             return this._instUid
         }
-        GetResumePosition() {}
+        GetResumePosition() { }
         Reconnect(toNode) {
             const outNode = this._stereoPannerNode || this._pannerNode || this._gainNode;
             outNode["disconnect"]();
@@ -3913,7 +3928,7 @@
         Stop() {
             if (this._bufferSource) try {
                 this._bufferSource["stop"](0)
-            } catch (err) {}
+            } catch (err) { }
             this._isStopped =
                 true;
             this._isPaused = false;
@@ -4032,8 +4047,8 @@
         CreateGain() {
             return this._audioContext["createGain"]()
         }
-        GetInputNode() {}
-        ConnectTo(node) {}
+        GetInputNode() { }
+        ConnectTo(node) { }
         SetAudioParam(ap, value, ramp, time) {
             ap["cancelScheduledValues"](0);
             if (time === 0) {
@@ -4666,7 +4681,7 @@
         GetInputNode() {
             return this._node
         }
-        SetParam(param, value, ramp, time) {}
+        SetParam(param, value, ramp, time) { }
     };
     self.C3AudioAnalyserFX = class C3AudioAnalyserFX extends AudioFXBase {
         constructor(audioDomHandler, fftSize, smoothing) {
@@ -4710,7 +4725,7 @@
         GetInputNode() {
             return this._node
         }
-        SetParam(param, value, ramp, time) {}
+        SetParam(param, value, ramp, time) { }
         GetData() {
             return {
                 "tag": this.GetTag(),
