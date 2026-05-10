@@ -659,22 +659,33 @@
             this._runtimeDomHandler._EnableWindowResizeEvent();
             this._OnBeforeCreateRuntime();
             this._localRuntime = self["C3_CreateRuntime"](runtimeOpts);
-            // runtime hook for mods
             await self["C3_InitRuntime"](this._localRuntime, runtimeOpts);
             window.rt = this._localRuntime;
             window.ModAPI = {
-                runtime: window.rt
+                runtime: window.rt,
+                mods: [],
+                ready: false
             };
-            console.log("[ModLoader] Runtime Ready");
-            const script = document.createElement("script");
-            script.src = "scripts/funny-mods.js";
-            script.onload = () => {
-                console.log("[ModLoader] funny-mods.js loaded");
-            };
-            script.onerror = (e) => {
-                console.error("[ModLoader] failed loading mod", e);
-            };
-            document.head.appendChild(script);
+            console.log("[Hook] Runtime Ready");
+            function loadScript(src) {
+                return new Promise((resolve, reject) => {
+                    const s = document.createElement("script");
+                    s.src = src;
+                    s.onload = resolve;
+                    s.onerror = reject;
+                    document.head.appendChild(s);
+                });
+            }
+            (async () => {
+                try {
+                    await loadScript("scripts/core/modAPI.js");
+                    await loadScript("scripts/core/modHandler.js");
+                    await loadScript("scripts/core/modUI.js");
+                    await loadScript("scripts/core/modLoader.js");
+                } catch (e) {
+                    console.error("[Hook] Failed loading mod system", e);
+                }
+            })();
         }
         _ReportProjectMainScriptError(url, err) {
             this._RemoveLoadingMessage();
@@ -4875,37 +4886,8 @@
             debugMode,
             preventScroll
         }) {
-            if (typeof PokiSDK !== "undefined") {
-                if (preventScroll) this.preventScroll();
-
-                this._pokiSDKLoaded = true;
-                let adBlock = false;
-                return PokiSDK.init()
-                    .then(() => {
-                        console.log("Poki SDK successfully initialized");
-                        return {
-                            loaded: this._pokiSDKLoaded,
-                            adBlock: adBlock
-                        };
-                    })
-                    .catch(() => {
-                        console.log("Initialized, but the user likely has adblock");
-                        adBlock = true;
-                        return {
-                            loaded: this._pokiSDKLoaded,
-                            adBlock: adBlock
-                        };
-                    })
-                    .finally(() => {
-                        if (debugMode) this.SetDebugMode(true);
-                        PokiSDK.gameLoadingStart();
-                    });
-            } else {
-                console.log("Poki SDK failed to load");
-                return Promise.resolve({
-                    loaded: this._pokiSDKLoaded,
-                    adBlock: false
-                });
+            if (typeof PokiSDK == "undefined") {
+                return "fulfilled"
             }
         }
         preventScroll() {

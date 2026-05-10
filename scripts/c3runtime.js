@@ -44919,7 +44919,6 @@ void main(void) {
             if (!this.IsPreview()) console.info("Made with Construct, the game and app creator :: https://www.construct.net");
             if (this.GetWebGLRenderer()) {
                 const webglRenderer = this.GetWebGLRenderer();
-                console.info(`[C3 runtime] Hosted in ${this.IsInWorker()?"worker":"DOM"}, rendering with WebGL ${webglRenderer.GetWebGLVersionNumber()} [${webglRenderer.GetUnmaskedRenderer()}] (${webglRenderer.IsDesynchronized()?"desynchronized":"standard"} compositing)`)
             } else if (this.GetWebGPURenderer()) console.info(`[C3 runtime] Hosted in ${this.IsInWorker()?
 "worker":"DOM"}, rendering with experimental WebGPU`);
             if (this.GetRenderer().HasMajorPerformanceCaveat()) console.warn("[C3 runtime] The renderer indicates a major performance caveat. Software rendering may be in use. This can result in significantly degraded performance.");
@@ -45803,13 +45802,11 @@ void main(void) {
             if (this._suspendCount < 0) this._suspendCount = 0;
             const isSuspended = this.IsSuspended();
             if (!wasSuspended && isSuspended) {
-                console.log("[Construct] Suspending");
                 this._CancelAnimationFrame();
                 this._dispatcher.dispatchEvent(C3.New(C3.Event,
                     "suspend"));
                 this.Trigger(C3.Plugins.System.Cnds.OnSuspend, null, null)
             } else if (wasSuspended && !isSuspended) {
-                console.log("[Construct] Resuming");
                 const now = performance.now();
                 this._lastTickTime = now;
                 this._fpsLastTime = now;

@@ -27,3 +27,172 @@ data docs
     [],
     []
 ]
+
+
+
+image testing
+(() => {
+    if (document.getElementById("img-loader-ui")) return;
+
+    const box = document.createElement("div");
+    box.id = "img-loader-ui";
+
+    let flipped = false;
+    let dragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+
+    box.style = `
+        position:fixed;
+        top:20px;
+        right:20px;
+        width:380px;
+        background:#111;
+        color:#fff;
+        padding:10px;
+        z-index:999999;
+        font-family:monospace;
+        border:1px solid #333;
+        border-radius:8px;
+        cursor:default;
+    `;
+
+    box.innerHTML = `
+        <div id="dragBar" style="
+            font-weight:bold;
+            margin-bottom:6px;
+            cursor:move;
+            user-select:none;
+        ">
+            Sprite Loader (Drag Me)
+        </div>
+
+        <textarea id="imgInput" style="
+            width:100%;
+            height:140px;
+            background:#000;
+            color:#0f0;
+            border:1px solid #333;
+            font-size:11px;
+        ">[
+"images/shared-0-sheet1.png",
+398406,
+515,
+1537,
+747,
+300,
+false,
+1,
+0.48728246318607765,
+0.5366666666666666,
+[],
+[]
+]</textarea>
+
+        <button id="loadBtn" style="width:100%;margin-top:6px;padding:6px;">
+            Load Frame
+        </button>
+
+        <button id="flipBtn" style="width:100%;margin-top:6px;padding:6px;">
+            Flip Image
+        </button>
+
+        <div id="preview" style="margin-top:10px;"></div>
+    `;
+
+    document.body.appendChild(box);
+
+    // ---------------- DRAG LOGIC ----------------
+
+    const dragBar = document.getElementById("dragBar");
+
+    dragBar.onmousedown = (e) => {
+        dragging = true;
+        offsetX = e.clientX - box.getBoundingClientRect().left;
+        offsetY = e.clientY - box.getBoundingClientRect().top;
+    };
+
+    document.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+
+        box.style.left = (e.clientX - offsetX) + "px";
+        box.style.top = (e.clientY - offsetY) + "px";
+        box.style.right = "auto";
+    });
+
+    document.addEventListener("mouseup", () => {
+        dragging = false;
+    });
+
+    // ---------------- RENDER FUNCTION ----------------
+
+    function renderFrame() {
+        let data;
+
+        try {
+            data = JSON.parse(document.getElementById("imgInput").value);
+        } catch {
+            alert("Invalid JSON");
+            return;
+        }
+
+        const path = data[0];
+        const cropX = data[2];
+        const cropY = data[3];
+        const cropW = data[4];
+        const cropH = data[5];
+        const rotated = data[6];
+
+        const preview = document.getElementById("preview");
+        preview.innerHTML = "Loading...";
+
+        const img = new Image();
+        img.src = path;
+
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            canvas.width = cropW;
+            canvas.height = cropH;
+
+            ctx.save();
+
+            // flip + rotation
+            ctx.translate(cropW / 2, cropH / 2);
+            ctx.scale(flipped ? -1 : 1, 1);
+
+            if (rotated) {
+                ctx.rotate(Math.PI / 2);
+            }
+
+            ctx.drawImage(
+                img,
+                cropX,
+                cropY,
+                cropW,
+                cropH,
+                -cropW / 2,
+                -cropH / 2,
+                cropW,
+                cropH
+            );
+
+            ctx.restore();
+
+            preview.innerHTML = "";
+            preview.appendChild(canvas);
+        };
+    }
+
+    // ---------------- BUTTONS ----------------
+
+    document.getElementById("loadBtn").onclick = renderFrame;
+
+    document.getElementById("flipBtn").onclick = () => {
+        flipped = !flipped;
+        renderFrame();
+    };
+
+    console.log("Draggable Sprite Loader ready");
+})();

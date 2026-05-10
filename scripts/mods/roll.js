@@ -1,43 +1,41 @@
 (function () {
 
-    // ---------------- RUNTIME ----------------
-
     let runtime = null;
+    let running = false;
+    let rafId = null;
 
     function getRuntime() {
-        return window.c3_runtimeInterface?._localRuntime || null;
+        return window.rt
+            || window.c3_runtimeInterface?._localRuntime
+            || null;
     }
 
     function ensureRuntime() {
         const r = getRuntime();
-
-        if (r && r !== runtime) {
-            runtime = r;
-
-            // force full rescan when runtime changes
-            yellow = red = blue = null;
-            wi_yellow = wi_red = wi_blue = null;
-        }
-
+        if (r) runtime = r;
         return runtime;
     }
 
-    // ---------------- FINDERS ----------------
+    function getInstances() {
+        if (!runtime) return null;
+        return runtime._instancesByUid || runtime._instances || null;
+    }
 
     function findByName(name) {
-        if (!runtime?._instancesByUid) return null;
+        const instances = getInstances();
+        if (!instances) return null;
 
-        return Array.from(runtime._instancesByUid.values()).find(o => {
-            const n = o._objectType?._name?.toLowerCase() || "";
-            return n === name;
+        const lower = name.toLowerCase();
+
+        return Array.from(instances.values()).find(o => {
+            const n = o?._objectType?._name?.toLowerCase?.() || "";
+            return n === lower;
         });
     }
 
     const findYellow = () => findByName("yellow_skin");
     const findRed    = () => findByName("red_skin");
     const findBlue   = () => findByName("blue_skin");
-
-    // ---------------- STATE ----------------
 
     let yellow, red, blue;
     let wi_yellow, wi_red, wi_blue;
@@ -50,73 +48,40 @@
     let holdingA = false, holdingD = false;
     let holdingLeft = false, holdingRight = false;
 
-    // ---------------- INPUT ----------------
-
-    document.addEventListener("keydown", (e) => {
+    function onKeyDown(e) {
         const k = e.key.toLowerCase();
 
         if (k === "j") holdingJ = true;
         if (k === "l") holdingL = true;
-
         if (k === "a") holdingA = true;
         if (k === "d") holdingD = true;
 
         if (e.key === "ArrowLeft") holdingLeft = true;
         if (e.key === "ArrowRight") holdingRight = true;
-    });
+    }
 
-    document.addEventListener("keyup", (e) => {
+    function onKeyUp(e) {
         const k = e.key.toLowerCase();
 
         if (k === "j") holdingJ = false;
         if (k === "l") holdingL = false;
-
         if (k === "a") holdingA = false;
         if (k === "d") holdingD = false;
 
         if (e.key === "ArrowLeft") holdingLeft = false;
         if (e.key === "ArrowRight") holdingRight = false;
-    });
-
-    // ---------------- RECOVERY ----------------
-
-    let lastFullLossTime = 0;
-
-    function shouldForceRescan(y, r, b) {
-        return !y && !r && !b;
     }
-
-    function forceRescanIfNeeded() {
-        const now = Date.now();
-
-        const y = !!findYellow();
-        const r = !!findRed();
-        const b = !!findBlue();
-
-        if (shouldForceRescan(y, r, b)) {
-            if (now - lastFullLossTime > 1000) {
-                yellow = red = blue = null;
-                wi_yellow = wi_red = wi_blue = null;
-                lastFullLossTime = now;
-            }
-        }
-    }
-
-    // ---------------- LOOP ----------------
 
     function loop() {
+        if (!running) return;
 
         ensureRuntime();
-
         if (!runtime) {
-            requestAnimationFrame(loop);
+            rafId = requestAnimationFrame(loop);
             return;
         }
 
-        forceRescanIfNeeded();
-
-        // -------- YELLOW --------
-        if (!yellow || yellow._destroyed || !wi_yellow) {
+        if (!yellow || yellow._destroyed) {
             yellow = findYellow();
             wi_yellow = yellow?._worldInfo || null;
         }
@@ -129,8 +94,7 @@
             wi_yellow.SetBboxChanged?.();
         }
 
-        // -------- RED --------
-        if (!red || red._destroyed || !wi_red) {
+        if (!red || red._destroyed) {
             red = findRed();
             wi_red = red?._worldInfo || null;
         }
@@ -143,8 +107,7 @@
             wi_red.SetBboxChanged?.();
         }
 
-        // -------- BLUE --------
-        if (!blue || blue._destroyed || !wi_blue) {
+        if (!blue || blue._destroyed) {
             blue = findBlue();
             wi_blue = blue?._worldInfo || null;
         }
@@ -157,9 +120,34 @@
             wi_blue.SetBboxChanged?.();
         }
 
-        requestAnimationFrame(loop);
+        rafId = requestAnimationFrame(loop);
     }
 
-    loop();
+
+    const mod = {
+        id: 2,
+        name: "Roll",
+        desc: "makes the skins roll When moving ",
+        enabled: false,
+
+        init(api) {
+            document.addEventListener("keydown", onKeyDown);
+            document.addEventListener("keyup", onKeyUp);
+        },
+
+        toggle(state) {
+
+            running = state;
+
+            if (state) {
+                loop();
+            } else {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = null;
+            }
+        }
+    };
+
+    window.ModAPI?.register(mod);
 
 })();
