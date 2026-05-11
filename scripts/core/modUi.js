@@ -143,6 +143,8 @@
                 <div class="card" style="margin-top:12px">
                     <b>Changelog</b>
                     <div class="logbox">
+                        v1.0.1 - bug fixes<br>
+                        • Fixed issue with roll mod not working for more then one round<br>
                         v1.0.0 - Initial release<br>
                         • Added mod management UI<br>
                     </div>
